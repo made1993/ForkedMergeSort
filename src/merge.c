@@ -1,30 +1,57 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-int forkedMergeSort(int * tabla,int ini, int fin){
+#include <pthread.h>
+typedef struct str_thdata{
+	int * tabla;
+	int ini;
+	int fin;
+}MergeData;
+int MergeSort(int * tabla,int ini, int fin){
 	int medio, i;
-	printf("forkedMergeSort ini=%d fin= %d \n",ini, fin);
 	if (tabla ==NULL)
 		return 0;
-	if (fin - ini<2)
+	if (fin == ini)
 		return 1;
 	medio = (ini+fin)/2;
-	forkedMergeSort(tabla, ini, medio);
-	forkedMergeSort(tabla, medio+1, fin);
+	MergeSort(tabla, ini, medio);
+	MergeSort(tabla, medio+1, fin);
 	merge(tabla,ini,fin,medio);
-	printf("\n");
-	for(i=0;i<10;i++){
-		printf("%d ", tabla[i]);
-	}
-	printf("\n");
 	return 1;
 }
+
+int forkedMergeSort(void * arg){
+
+	int medio, i;
+	MergeData data1, data2, *data;
+	data= (MergeData*)arg;
+	pthread_t thread1,thread2;
+	if (data->tabla ==NULL)
+		return 0;
+	if (data->fin == data->ini)
+		return 1;
+	medio = (data->ini+data->fin)/2;
+	data1.tabla=data->tabla;
+	data1.ini=data->ini;
+	data1.fin=medio;
+
+	data2.tabla=data->tabla;
+	data2.ini=medio+1;
+	data2.fin=data->fin;
+	pthread_create(&thread1, NULL,(void *)&forkedMergeSort, (void *) &data1);
+	pthread_create(&thread2, NULL,(void *)&forkedMergeSort, (void *) &data2);
+	pthread_join(thread1, NULL);
+	pthread_join(thread2, NULL);
+	merge(data->tabla,data->ini,data->fin,medio);
+	return 1;
+}
+
+
+
 int merge(int *tabla, int ini, int fin, int medio){
-	printf("merge ini=%d fin= %d medio=%d\n",ini, fin,medio);
 	int i= ini,j=medio+1, k=0;
 	int * auxTabla=NULL;
-	auxTabla= malloc(sizeof(int)*fin-ini +1);
+	auxTabla= (int*)malloc(sizeof(int)*fin-ini +1);
 	if(ini==fin)
 		return 1;
 	while(i<=medio && j<=fin){
@@ -51,22 +78,31 @@ int merge(int *tabla, int ini, int fin, int medio){
 	return 1;
 }
 
-int main(){
+
+
+int main(int argc, char ** argv){
 	int* tabla = NULL;
-	int i=0, j=10;
-	tabla = malloc(sizeof(int)*10);
-	for(i=0,j=10;i<10;j--,i++){
+	int i=0, j=10, size;
+	if(argc<3)
+		return 0;
+	size= atoi(argv[1]);
+	tabla = malloc(sizeof(int)*size);
+	for(i=0,j=size;i<size;j--,i++){
 		tabla[i]=j;
 	}
-	for(i=0;i<10;i++){
-		printf("%d ", tabla[i]);
-	}
-	printf("\n");
-	printf("%d\n",forkedMergeSort(tabla,0,9));
 	
-
-	for(i=0;i<10;i++){
-		printf("%d ", tabla[i]);
+	if(strcmp(argv[2],"f")==0){
+		MergeData data;
+		data.tabla=tabla;
+		data.ini=0;
+		data.fin=size-1;
+		forkedMergeSort((void*) &data);
 	}
-	printf("\n");
+	else if(strcmp(argv[2],"t")==0){
+	}
+	else if(strcmp(argv[2],"n")==0){
+		MergeSort(tabla,0,size-1);
+	}
+	
+	free(tabla);
 }

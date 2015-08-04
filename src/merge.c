@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#
 typedef struct str_thdata{
 	int * tabla;
 	int ini;
@@ -20,7 +21,7 @@ int MergeSort(int * tabla,int ini, int fin){
 	return 1;
 }
 
-int forkedMergeSort(void * arg){
+int threadMergeSort(void * arg){
 
 	int medio, i;
 	MergeData data1, data2, *data;
@@ -38,15 +39,29 @@ int forkedMergeSort(void * arg){
 	data2.tabla=data->tabla;
 	data2.ini=medio+1;
 	data2.fin=data->fin;
-	pthread_create(&thread1, NULL,(void *)&forkedMergeSort, (void *) &data1);
-	pthread_create(&thread2, NULL,(void *)&forkedMergeSort, (void *) &data2);
+	pthread_create(&thread1, NULL,(void *)&threadMergeSort, (void *) &data1);
+	pthread_create(&thread2, NULL,(void *)&threadMergeSort, (void *) &data2);
 	pthread_join(thread1, NULL);
 	pthread_join(thread2, NULL);
 	merge(data->tabla,data->ini,data->fin,medio);
 	return 1;
 }
-
-
+int ClusterMergeSort(int puerto){
+	int socket;
+	char * buffer;
+	socket = abrirSocketUDP();
+	abrirBind(socket, puerto);
+	recibir(socket,buffer);
+	return 1;
+}
+int ServerMergeSort(int puerto){
+	int socket;
+	char * buffer;
+	socket = abrirSocketUDP();
+	abrirBind(socket, puerto);
+	recibir(socket,buffer);
+	return 1;
+}
 
 int merge(int *tabla, int ini, int fin, int medio){
 	int i= ini,j=medio+1, k=0;
@@ -91,18 +106,22 @@ int main(int argc, char ** argv){
 		tabla[i]=j;
 	}
 	
-	if(strcmp(argv[2],"f")==0){
+	if(strcmp(argv[2],"t")==0){
 		MergeData data;
 		data.tabla=tabla;
 		data.ini=0;
 		data.fin=size-1;
-		forkedMergeSort((void*) &data);
-	}
-	else if(strcmp(argv[2],"t")==0){
-	}
-	else if(strcmp(argv[2],"n")==0){
+		threadMergeSort((void*) &data);
+	}else if(strcmp(argv[2],"n")==0){
 		MergeSort(tabla,0,size-1);
+	}else if(strcmp(argv[2],"c")==0){
+		ClusterMergeSort();
+	}else if(strcmp(argv[2],"s")==0){
+		ServerMergeSort();
 	}
-	
+	for(i=0,j=size;i<size;j--,i++){
+		printf("%d ",tabla[i]);
+	}
+	printf("\n");
 	free(tabla);
 }
